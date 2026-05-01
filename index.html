@@ -1,1 +1,1622 @@
-x
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Osservatorio Salute Mentale — Provincia di Parma</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Mono:wght@300;400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:       #05b0b0;
+  --surface:  #161b22;
+  --surface2: #1c2330;
+  --border:   #2a3340;
+  --text:     #e8e2d6;
+  --muted:    #7a8694;
+  --amber:    #e8a838;
+  --rust:     #c95f3a;
+  --sage:     #4fa87a;
+  --sky:      #4a9fd4;
+  --violet:   #8b72be;
+  --danger:   #d94f4f;
+  --mono:     'DM Mono', monospace;
+  --serif:    'Playfair Display', Georgia, serif;
+  --sans:     'DM Sans', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ─── NOISE OVERLAY ─── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+}
+
+/* ─── HEADER ─── */
+header {
+  position: relative;
+  padding: 60px 48px 40px;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.header-glow {
+  position: absolute;
+  top: -120px; right: -80px;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(232,168,56,0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.header-line {
+  width: 40px; height: 2px;
+  background: var(--amber);
+  margin-bottom: 18px;
+}
+
+.header-eyebrow {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 14px;
+}
+
+h1 {
+  font-family: var(--serif);
+  font-size: clamp(28px, 4vw, 52px);
+  font-weight: 900;
+  line-height: 1.08;
+  color: var(--text);
+  max-width: 640px;
+  margin-bottom: 16px;
+}
+
+h1 em {
+  font-style: italic;
+  color: var(--amber);
+}
+
+.header-desc {
+  font-size: 14px;
+  color: var(--muted);
+  max-width: 520px;
+  line-height: 1.7;
+  margin-bottom: 28px;
+}
+
+.header-tags {
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+
+.tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--muted);
+}
+
+.tag.active { border-color: var(--amber); color: var(--amber); }
+
+/* ─── DATA UPDATE BADGE ─── */
+.update-badge {
+  position: absolute;
+  top: 32px; right: 48px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  text-align: right;
+  line-height: 1.8;
+}
+
+.update-badge .dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--sage);
+  border-radius: 50%;
+  margin-right: 6px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+/* ─── MAIN LAYOUT ─── */
+main {
+  padding: 0 48px 80px;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+/* ─── SECTION TITLE ─── */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin: 52px 0 24px;
+}
+
+.section-num {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 2px;
+}
+
+.section-title {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.section-rule {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ─── KPI STRIP ─── */
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  margin-top: 40px;
+  animation: fadeUp 0.8s ease both;
+}
+
+.kpi {
+  background: var(--surface);
+  padding: 28px 24px;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.2s;
+}
+
+.kpi:hover { background: var(--surface2); }
+
+.kpi::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 100%; height: 2px;
+}
+
+.kpi.amber::after { background: var(--amber); }
+.kpi.rust::after  { background: var(--rust); }
+.kpi.sage::after  { background: var(--sage); }
+.kpi.sky::after   { background: var(--sky); }
+.kpi.danger::after{ background: var(--danger); }
+
+.kpi-val {
+  font-family: var(--serif);
+  font-size: 42px;
+  font-weight: 900;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.kpi.amber .kpi-val { color: var(--amber); }
+.kpi.rust  .kpi-val { color: var(--rust); }
+.kpi.sage  .kpi-val { color: var(--sage); }
+.kpi.sky   .kpi-val { color: var(--sky); }
+.kpi.danger .kpi-val { color: var(--danger); }
+
+.kpi-label {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.kpi-sub {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 8px;
+  opacity: 0.7;
+}
+
+/* ─── GRID LAYOUTS ─── */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+
+.grid-3-1 {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+}
+
+.grid-1-2 {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 16px;
+}
+
+/* ─── CARD ─── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 28px;
+  position: relative;
+  animation: fadeUp 0.7s ease both;
+}
+
+.card-title {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.card-title::before {
+  content: '';
+  display: inline-block;
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: var(--amber);
+  flex-shrink: 0;
+}
+
+.chart-wrap {
+  position: relative;
+  width: 100%;
+}
+
+/* ─── DIAGNOSI TABLE ─── */
+.diag-list { list-style: none; }
+
+.diag-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.diag-item:last-child { border-bottom: none; }
+
+.diag-name {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.diag-pct {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--amber);
+}
+
+.diag-bar-wrap {
+  grid-column: 1 / -1;
+  height: 3px;
+  background: var(--border);
+  border-radius: 1px;
+  margin-top: -6px;
+}
+
+.diag-bar {
+  height: 100%;
+  border-radius: 1px;
+  transition: width 1.2s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ─── CSM DISTRICTS ─── */
+.district-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.district {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 16px;
+  border-left: 3px solid;
+  transition: transform 0.2s;
+}
+
+.district:hover { transform: translateX(4px); }
+
+.district.parma    { border-left-color: var(--amber); }
+.district.fidenza  { border-left-color: var(--sage); }
+.district.sudest   { border-left-color: var(--sky); }
+.district.valli    { border-left-color: var(--violet); }
+
+.district-name {
+  font-family: var(--serif);
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.district-csm {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.district-subs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.sub-tag {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 1px;
+  padding: 2px 6px;
+  background: var(--border);
+  color: var(--muted);
+  border-radius: 1px;
+}
+
+/* ─── HOSPITAL STATS ─── */
+.hosp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.hosp-stat {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 20px;
+  text-align: center;
+}
+
+.hosp-val {
+  font-family: var(--serif);
+  font-size: 30px;
+  font-weight: 900;
+  color: var(--amber);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.hosp-label {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+/* ─── GENDER LEGEND ─── */
+.gender-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.gender-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.gender-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ─── OPEN DATA AUDIT ─── */
+.audit-list { list-style: none; }
+
+.audit-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.audit-item:last-child { border-bottom: none; }
+
+.audit-name {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.audit-source {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.status-pill {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 1px;
+  padding: 3px 8px;
+  border-radius: 1px;
+  white-space: nowrap;
+}
+
+.status-pill.open    { background: rgba(79,168,122,0.15); color: var(--sage); border: 1px solid rgba(79,168,122,0.3); }
+.status-pill.partial { background: rgba(232,168,56,0.12); color: var(--amber); border: 1px solid rgba(232,168,56,0.3); }
+.status-pill.closed  { background: rgba(217,79,79,0.12);  color: var(--danger); border: 1px solid rgba(217,79,79,0.3); }
+
+/* ─── STRANIERI PANEL ─── */
+.compare-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.compare-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.compare-label {
+  font-size: 12px;
+  color: var(--muted);
+  width: 100px;
+  flex-shrink: 0;
+  line-height: 1.3;
+}
+
+.compare-bar-outer {
+  flex: 1;
+  height: 8px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.compare-bar-inner {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 1.4s cubic-bezier(0.4,0,0.2,1);
+}
+
+.compare-val {
+  font-family: var(--mono);
+  font-size: 12px;
+  width: 40px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ─── FUNDING TIMELINE ─── */
+.funding-track {
+  position: relative;
+  padding-left: 24px;
+}
+
+.funding-track::before {
+  content: '';
+  position: absolute;
+  left: 6px; top: 8px; bottom: 8px;
+  width: 1px;
+  background: var(--border);
+}
+
+.funding-step {
+  position: relative;
+  margin-bottom: 24px;
+}
+
+.funding-step::before {
+  content: '';
+  position: absolute;
+  left: -18px; top: 6px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  border: 2px solid;
+}
+
+.funding-step.f1::before { border-color: var(--sage); background: var(--sage); }
+.funding-step.f2::before { border-color: var(--amber); background: transparent; }
+.funding-step.f3::before { border-color: var(--sky); background: transparent; }
+
+.funding-when {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 3px;
+}
+
+.funding-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+
+.funding-amount {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--amber);
+}
+
+.funding-desc {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* ─── FOOTER ─── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 32px 48px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.footer-left {
+  font-family: var(--serif);
+  font-size: 16px;
+  font-style: italic;
+  color: var(--muted);
+}
+
+.footer-right {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  text-align: right;
+  line-height: 1.8;
+}
+
+.footer-right a {
+  color: var(--amber);
+  text-decoration: none;
+}
+
+/* ─── ANIMATIONS ─── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.card:nth-child(1) { animation-delay: 0.05s; }
+.card:nth-child(2) { animation-delay: 0.12s; }
+.card:nth-child(3) { animation-delay: 0.18s; }
+
+/* ─── COUNTER ANIMATION ─── */
+.count-up { display: inline-block; }
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 900px) {
+  header, main, footer { padding-left: 24px; padding-right: 24px; }
+  .kpi-strip { grid-template-columns: repeat(3, 1fr); }
+  .grid-2, .grid-3, .grid-3-1, .grid-1-2 { grid-template-columns: 1fr; }
+  .hosp-grid { grid-template-columns: repeat(2, 1fr); }
+  .district-grid { grid-template-columns: 1fr; }
+  .update-badge { display: none; }
+}
+
+@media (max-width: 540px) {
+  .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+  h1 { font-size: 28px; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-glow"></div>
+  <div class="update-badge">
+    <span class="dot"></span>DATI AGGIORNATI<br>ANNO 2024 · DAISM-DP<br>Fonte: Report AUSL Parma
+  </div>
+  <div class="header-eyebrow">Osservatorio Dati Aperti</div>
+  <div class="header-line"></div>
+  <h1>Salute Mentale<br>nella Provincia di Parma</h1>
+  <p class="header-desc">Dashboard di monitoraggio degli indicatori di salute mentale sul territorio. Dati aggregati da DAISM-DP AUSL Parma, SISM Regione Emilia-Romagna, ISTAT e fonti pubbliche. Aggiornamento annuale.</p>
+  <div class="header-tags">
+    <span class="tag active">Aprile 2026</span>
+    <span class="tag">Ente individuato come capofila Progetto Itaca Parma</span>
+    <span class="tag">possibile collaborazione con UniPR</span>
+    <span class="tag">e AUSL Parma</span>
+    <span class="tag">Open Data</span>
+    <span class="tag">Mental Health</span>
+  </div>
+</header>
+
+<!-- KPI STRIP -->
+<main>
+<div class="kpi-strip">
+  <div class="kpi amber">
+    <div class="kpi-val"><span class="count-up" data-target="17634">0</span></div>
+    <div class="kpi-label">Persone in carico<br>ai servizi DAISM-DP</div>
+    <div class="kpi-sub">+1,3% su 2023</div>
+  </div>
+  <div class="kpi rust">
+    <div class="kpi-val">3,5<span style="font-size:22px">%</span></div>
+    <div class="kpi-label">Della popolazione<br>provinciale coinvolta</div>
+    <div class="kpi-sub">448.865 ab. (ISTAT 2024)</div>
+  </div>
+  <div class="kpi danger">
+    <div class="kpi-val"><span class="count-up" data-target="35">0</span></div>
+    <div class="kpi-label">Suicidi l'anno<br>in provincia</div>
+    <div class="kpi-sub">≈ 3 al mese</div>
+  </div>
+  <div class="kpi sage">
+    <div class="kpi-val">+14<span style="font-size:22px">%</span></div>
+    <div class="kpi-label">Ricoveri psichiatrici<br>2023 → 2024</div>
+    <div class="kpi-sub">542 ricoveri totali</div>
+  </div>
+  <div class="kpi sky">
+    <div class="kpi-val">&gt;100</div>
+    <div class="kpi-label">Trattamenti Sanitari<br>Obbligatori (TSO)</div>
+    <div class="kpi-sub">Solo SPDC Osp. Maggiore</div>
+  </div>
+</div>
+
+<!-- TREND + DIAGNOSI -->
+<div class="section-head">
+  <span class="section-num">01</span>
+  <h2 class="section-title">Trend e Distribuzione Diagnostica</h2>
+  <div class="section-rule"></div>
+</div>
+
+<div class="grid-3-1">
+  <div class="card">
+    <div class="card-title">Utenti in carico 2020–2024 · Psichiatria adulti (SMA)</div>
+    <div class="chart-wrap" style="height:280px">
+      <canvas id="trendChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Distribuzione diagnosi principali · 2024</div>
+    <ul class="diag-list" id="diagList"></ul>
+  </div>
+</div>
+
+<!-- GENERE + STRANIERI -->
+<div class="section-head">
+  <span class="section-num">02</span>
+  <h2 class="section-title">Genere e Provenienza</h2>
+  <div class="section-rule"></div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-title">Prevalenza di genere per diagnosi · % donne</div>
+    <div class="gender-row">
+      <div class="gender-item"><span class="gender-dot" style="background:var(--violet)"></span>Donne</div>
+      <div class="gender-item"><span class="gender-dot" style="background:var(--sky)"></span>Uomini</div>
+    </div>
+    <div class="chart-wrap" style="height:260px">
+      <canvas id="genderChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Utenti stranieri · 18% del totale (3.219 persone)</div>
+    <div class="compare-wrap" id="stranieriCompare" style="margin-top:8px">
+      <!-- injected by JS -->
+    </div>
+    <div style="margin-top:24px">
+      <div class="card-title" style="margin-bottom:12px">Età media per provenienza</div>
+      <div class="chart-wrap" style="height:160px">
+        <canvas id="etaChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AREA OSPEDALIERA -->
+<div class="section-head">
+  <span class="section-num">03</span>
+  <h2 class="section-title">Area Ospedaliera</h2>
+  <div class="section-rule"></div>
+</div>
+
+<div class="grid-1-2">
+  <div class="card">
+    <div class="card-title">Indicatori chiave ospedalieri · 2024</div>
+    <div class="hosp-grid">
+      <div class="hosp-stat"><div class="hosp-val">542</div><div class="hosp-label">Ricoveri totali psichiatrici</div></div>
+      <div class="hosp-stat"><div class="hosp-val" style="color:var(--danger)">&gt;100</div><div class="hosp-label">TSO eseguiti</div></div>
+      <div class="hosp-stat"><div class="hosp-val" style="color:var(--sage)">2.705</div><div class="hosp-label">Consulenze totali</div></div>
+      <div class="hosp-stat"><div class="hosp-val" style="color:var(--sky)">1.780</div><div class="hosp-label">Consulenze al Pronto Soccorso</div></div>
+      <div class="hosp-stat"><div class="hosp-val" style="color:var(--violet)">95</div><div class="hosp-label">Consulenze su minori (+46%)</div></div>
+      <div class="hosp-stat"><div class="hosp-val" style="color:var(--rust)">2,95%</div><div class="hosp-label">Reingressi &lt;30gg (LEA: ≤6,9%)</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Consulenze ospedaliere per tipo · 2024</div>
+    <div class="chart-wrap" style="height:260px">
+      <canvas id="hospChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- CSM PER DISTRETTO -->
+<div class="section-head">
+  <span class="section-num">04</span>
+  <h2 class="section-title">Rete CSM per Distretto</h2>
+  <div class="section-rule"></div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-title">Mappa dei 4 Distretti Sanitari</div>
+    <div class="district-grid">
+      <div class="district parma">
+        <div class="district-name" style="color:var(--amber)">Parma</div>
+        <div class="district-csm">CSM Parma Est (Largo Palli 1)<br>CSM Parma Nord-Ovest (Via Vasari 13)</div>
+        <div class="district-subs">
+          <span class="sub-tag">Colorno</span><span class="sub-tag">Sorbolo</span>
+        </div>
+      </div>
+      <div class="district fidenza">
+        <div class="district-name" style="color:var(--sage)">Fidenza</div>
+        <div class="district-csm">CSM Fidenza (Via Berenini 153)</div>
+        <div class="district-subs">
+          <span class="sub-tag">Salsomaggiore</span><span class="sub-tag">San Secondo</span><span class="sub-tag">Busseto</span><span class="sub-tag">Noceto</span><span class="sub-tag">Fontanellato</span>
+        </div>
+      </div>
+      <div class="district sudest">
+        <div class="district-name" style="color:var(--sky)">Sud Est</div>
+        <div class="district-csm">CSM Langhirano (Via Roma 42)</div>
+        <div class="district-subs">
+          <span class="sub-tag">Collecchio</span><span class="sub-tag">Traversetolo</span>
+        </div>
+      </div>
+      <div class="district valli">
+        <div class="district-name" style="color:var(--violet)">Valli Taro e Ceno</div>
+        <div class="district-csm">CSM Fornovo (Via Solferino 37)</div>
+        <div class="district-subs">
+          <span class="sub-tag">Borgotaro</span><span class="sub-tag">Medesano</span><span class="sub-tag">Bardi</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Rete DAISM-DP — struttura completa</div>
+    <div class="chart-wrap" style="height:260px">
+      <canvas id="reteChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- OPEN DATA AUDIT -->
+<div class="section-head">
+  <span class="section-num">05</span>
+  <h2 class="section-title">Audit Open Data — Stato di Accessibilità</h2>
+  <div class="section-rule"></div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-title">Fonti per stato di apertura</div>
+    <div class="chart-wrap" style="height:220px">
+      <canvas id="auditChart"></canvas>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:16px;flex-wrap:wrap">
+      <span style="font-family:var(--mono);font-size:10px;color:var(--sage)">● Aperto</span>
+      <span style="font-family:var(--mono);font-size:10px;color:var(--amber)">● Parziale (PDF/report)</span>
+      <span style="font-family:var(--mono);font-size:10px;color:var(--danger)">● Chiuso / non rilasciato</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Dataset — stato per fonte</div>
+    <ul class="audit-list">
+      <li class="audit-item">
+        <div><div class="audit-name">Report annuale DAISM-DP</div><div class="audit-source">AUSL Parma</div></div>
+        <span class="status-pill partial">PDF solo</span>
+      </li>
+      <li class="audit-item">
+        <div><div class="audit-name">SDO psichiatriche (SPDC/SPOI)</div><div class="audit-source">AOU Parma / Ministero</div></div>
+        <span class="status-pill closed">Chiuso</span>
+      </li>
+      <li class="audit-item">
+        <div><div class="audit-name">TSO per distretto e anno</div><div class="audit-source">AUSL Parma</div></div>
+        <span class="status-pill closed">Chiuso</span>
+      </li>
+      <li class="audit-item">
+        <div><div class="audit-name">SISM Emilia-Romagna (agg. AUSL PR)</div><div class="audit-source">SISEPS / Regione ER</div></div>
+        <span class="status-pill partial">Aggregato ER</span>
+      </li>
+      <li class="audit-item">
+        <div><div class="audit-name">Tempi attesa CUP psichiatria</div><div class="audit-source">tdaer.it / AUSL</div></div>
+        <span class="status-pill partial">Web, no export</span>
+      </li>
+      <li class="audit-item">
+        <div><div class="audit-name">PASSI / sorveglianza salute mentale</div><div class="audit-source">ISS / Regione ER</div></div>
+        <span class="status-pill open">Aperto</span>
+      </li>
+      <li class="audit-item">
+        <div><div class="audit-name">ISTAT — Health for All / BES</div><div class="audit-source">ISTAT</div></div>
+        <span class="status-pill open">Aperto</span>
+      </li>
+      <li class="audit-item">
+        <div><div class="audit-name">Accessi PS con crisi psichiatrica</div><div class="audit-source">AOU Parma</div></div>
+        <span class="status-pill closed">Chiuso</span>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<!-- FUNDING ROADMAP -->
+<div class="section-head">
+  <span class="section-num">06</span>
+  <h2 class="section-title">Roadmap di Finanziamento</h2>
+  <div class="section-rule"></div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-title">Strategia di funding per fase</div>
+    <div class="funding-track">
+      <div class="funding-step f1">
+        <div class="funding-when">Anno 1 · Immediato</div>
+        <div class="funding-name">Fondazione Cariparma — Generare Conoscenza</div>
+        <div class="funding-amount">€ 49.000 – 80.000</div>
+        <div class="funding-desc">Progetto pilota data lake + primo Rapporto annuale. Partner: Progetto Itaca + Ausl PR. Bando a due fasi, requisiti minimi.</div>
+      </div>
+      <div class="funding-step f2">
+        <div class="funding-when">Anno 2 · Medio termine</div>
+        <div class="funding-name">Ministero Salute / Regione ER</div>
+        <div class="funding-amount">€ 100.000 – 150.000</div>
+        <div class="funding-desc">Ricerca Finalizzata con Progetto Itaca capofila + AUSL come co-applicant. Ampliamento dataset e componente AI.</div>
+      </div>
+      <div class="funding-step f3">
+        <div class="funding-when">Anno 3+ · Europeo</div>
+        <div class="funding-name">Horizon Europe Cluster 1 / EU4Health</div>
+        <div class="funding-amount">€ 500.000+</div>
+        <div class="funding-desc">Con track record dei primi due anni. Progetto Itaca come partner civico in consorzio multinazionale.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Budget target cumulativo per anno</div>
+    <div class="chart-wrap" style="height:260px">
+      <canvas id="fundingChart"></canvas>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<!-- TENTATI SUICIDI -->
+<div class="section-head">
+  <span class="section-num">07</span>
+  <h2 class="section-title">Tentati Suicidi e Autolesionismo</h2>
+  <div class="section-rule"></div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-title">Suicidi completati — trend 2020–2024 · Provincia di Parma</div>
+    <div class="chart-wrap" style="height:240px">
+      <canvas id="suicidiChart"></canvas>
+    </div>
+    <div style="margin-top:16px;padding:12px;background:rgba(217,79,79,0.07);border:1px solid rgba(217,79,79,0.2);border-radius:2px">
+      <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--danger);margin-bottom:6px">DATO CRITICO</div>
+      <div style="font-size:12px;color:rgba(232,226,214,0.8);line-height:1.5">Nel 2024 solo <strong style="color:var(--text)">7 delle 35 persone</strong> decedute per suicidio erano in carico al DSM — il 20%. Gli altri <strong style="color:var(--text)">80% erano invisibili al sistema</strong> di cura.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Autolesionismo e tentati suicidi — minori · confronto nazionale</div>
+    <div class="chart-wrap" style="height:200px">
+      <canvas id="autolesChart"></canvas>
+    </div>
+    <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="padding:12px;background:var(--surface2);border:1px solid var(--border)">
+        <div style="font-family:var(--serif);font-size:22px;font-weight:900;color:var(--danger)">+46%</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Consulenze SPDC su minori<br>2023→2024 · Parma</div>
+      </div>
+      <div style="padding:12px;background:var(--surface2);border:1px solid var(--border)">
+        <div style="font-family:var(--serif);font-size:22px;font-weight:900;color:var(--rust)">70%</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Ricoveri NPI da tentato suicidio<br>o autolesionismo · dato naz.</div>
+      </div>
+    </div>
+    <div style="margin-top:12px;padding:10px 12px;background:rgba(201,95,58,0.08);border-left:3px solid var(--rust)">
+      <div style="font-size:11px;color:rgba(232,226,214,0.75);line-height:1.5">Carcere di Parma: <strong style="color:var(--text)">3 suicidi nel 2024</strong>, tasso 15× superiore alla popolazione generale. Autolesionismo in istituto: <strong style="color:var(--text)">20,3 atti ogni 100 detenuti</strong> (+24% su 2023).</div>
+    </div>
+  </div>
+</div>
+
+<!-- ALTRI ENTI -->
+<div class="section-head">
+  <span class="section-num">08</span>
+  <h2 class="section-title">Segnalazioni da Altri Enti e Portatori di Domanda</h2>
+  <div class="section-rule"></div>
+</div>
+
+<div class="grid-3">
+  <div class="card">
+    <div class="card-title">Scuole — canale "Si Può Fare" (AUSL + Itaca)</div>
+    <div style="margin-bottom:16px">
+      <div style="font-family:var(--serif);font-size:32px;font-weight:900;color:var(--sky)">448</div>
+      <div style="font-size:11px;color:var(--muted)">Accessi PS per DCA nel 2023<br>di cui 28% minorenni · 40% tra 18–34 anni</div>
+    </div>
+    <ul class="diag-list">
+      <li class="diag-item">
+        <span class="diag-name" style="font-size:12px">DCA minori al PS 2021</span>
+        <span class="diag-pct" style="font-size:12px;color:var(--sky)">~330</span>
+        <div class="diag-bar-wrap"><div class="diag-bar" style="width:0%;background:var(--sky)" data-width="74"></div></div>
+      </li>
+      <li class="diag-item">
+        <span class="diag-name" style="font-size:12px">DCA minori al PS 2023</span>
+        <span class="diag-pct" style="font-size:12px;color:var(--sky)">448</span>
+        <div class="diag-bar-wrap"><div class="diag-bar" style="width:0%;background:var(--sky)" data-width="100"></div></div>
+      </li>
+      <li class="diag-item">
+        <span class="diag-name" style="font-size:12px">Consulenze SPDC su minori 2023</span>
+        <span class="diag-pct" style="font-size:12px;color:var(--violet)">65</span>
+        <div class="diag-bar-wrap"><div class="diag-bar" style="width:0%;background:var(--violet)" data-width="40"></div></div>
+      </li>
+      <li class="diag-item">
+        <span class="diag-name" style="font-size:12px">Consulenze SPDC su minori 2024</span>
+        <span class="diag-pct" style="font-size:12px;color:var(--violet)">95</span>
+        <div class="diag-bar-wrap"><div class="diag-bar" style="width:0%;background:var(--violet)" data-width="58"></div></div>
+      </li>
+    </ul>
+    <div style="margin-top:14px;font-size:11px;color:var(--muted);line-height:1.5;padding-top:12px;border-top:1px solid var(--border)">Progetto "Si Può Fare" attivo in: Liceo Marconi, Scuola San Vitale + istituti su richiesta. Struttura: 3 incontri con psichiatra, esperto peer e volontari Itaca.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Carcere, Forze dell'Ordine, Servizi Sociali</div>
+    <div class="chart-wrap" style="height:180px">
+      <canvas id="entiChart"></canvas>
+    </div>
+    <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+      <div style="padding:8px 12px;background:var(--surface2);border-left:3px solid var(--danger);font-size:11px;line-height:1.4">
+        <strong style="color:var(--text)">Carcere Parma:</strong> <span style="color:var(--muted)">3 suicidi 2024. Tasso disagio psichico detenuti: 15× pop. generale. Antigone: 2,5 tentati suicidi ogni 100 detenuti.</span>
+      </div>
+      <div style="padding:8px 12px;background:var(--surface2);border-left:3px solid var(--amber);font-size:11px;line-height:1.4">
+        <strong style="color:var(--text)">Servizi sociali:</strong> <span style="color:var(--muted)">Segnalazioni da FdO, scuole, terzo settore al polo territoriale. Integrazione con Centro Antiviolenza per donne con disagio psichico.</span>
+      </div>
+      <div style="padding:8px 12px;background:var(--surface2);border-left:3px solid var(--sage);font-size:11px;line-height:1.4">
+        <strong style="color:var(--text)">MMG (medici base):</strong> <span style="color:var(--muted)">Primo filtro per accesso al CSM. Canale di intercettazione precoce: 70% dei nuovi utenti DSM arriva su invio del medico di famiglia.</span>
+      </div>
+      <div style="padding:8px 12px;background:var(--surface2);border-left:3px solid var(--violet);font-size:11px;line-height:1.4">
+        <strong style="color:var(--text)">Pronto Soccorso:</strong> <span style="color:var(--muted)">1.780 consulenze 2024 (+7% su 2023). Il PS è il punto di accesso non programmato più utilizzato per crisi psichiatrica acuta in provincia.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Piano Attuativo RER 2024 — Dotazione per AUSL Parma</div>
+    <div style="text-align:center;padding:20px 0">
+      <div style="font-family:var(--serif);font-size:48px;font-weight:900;color:var(--amber);line-height:1">€5,88M</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px">dal Fondo Regionale Salute Mentale 2024</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:12px;color:var(--muted)">Budget PDTA specifici</span>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--amber)">priorità 1</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:12px;color:var(--muted)">Budget di Salute individuali</span>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--sage)">ISS + RER linee indirizzo</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:12px;color:var(--muted)">Fondo Autonomia Possibile</span>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--sky)">progetti personalizzati</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0">
+        <span style="font-size:12px;color:var(--muted)">Casa Faro DCA (in prog.)</span>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--violet)">day service spec.</span>
+      </div>
+    </div>
+    <div style="margin-top:14px;font-size:10px;color:var(--muted);font-family:var(--mono);padding-top:10px;border-top:1px solid var(--border)">Su 40M€ totali RER per salute mentale 2024 · Parma = ~14,7% del fondo regionale</div>
+  </div>
+</div>
+
+<!-- LAVORO + SOCIAL -->
+<div class="section-head">
+  <span class="section-num">09</span>
+  <h2 class="section-title">Disagio nel Mondo del Lavoro e sui Social Media</h2>
+  <div class="section-rule"></div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-title">Disagio lavorativo — dati INAIL e nazionali (proxy Emilia-Romagna)</div>
+    <div class="chart-wrap" style="height:220px">
+      <canvas id="lavoroChart"></canvas>
+    </div>
+    <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div style="padding:10px;background:var(--surface2);border:1px solid var(--border);text-align:center">
+        <div style="font-family:var(--serif);font-size:22px;font-weight:900;color:var(--amber)">+17,9%</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px">Denunce INAIL<br>malattie psichiche<br>Q1 2024 vs 2023</div>
+      </div>
+      <div style="padding:10px;background:var(--surface2);border:1px solid var(--border);text-align:center">
+        <div style="font-family:var(--serif);font-size:22px;font-weight:900;color:var(--rust)">9,4%</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px">Quota ER sul<br>disagio lavorativo<br>nazionale</div>
+      </div>
+      <div style="padding:10px;background:var(--surface2);border:1px solid var(--border);text-align:center">
+        <div style="font-family:var(--serif);font-size:22px;font-weight:900;color:var(--sage)">49,6%</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px">Operatori sanitari<br>in burnout<br>(FADOI 2023)</div>
+      </div>
+    </div>
+    <div style="margin-top:14px;padding:10px 12px;background:rgba(232,168,56,0.07);border:1px solid rgba(232,168,56,0.2);font-size:11px;color:rgba(232,226,214,0.75);line-height:1.5">
+      <strong style="color:var(--text)">Nota Parma:</strong> Il disagio lavorativo non ha un canale diretto verso il CSM — passa attraverso il medico di base o l'accesso autonomo. Dato non tracciato separatamente nei report DAISM-DP. <em style="color:var(--amber)">Gap di rilevazione prioritario per l'Osservatorio.</em>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Social media e salute mentale — indicatori nazionali applicabili a Parma</div>
+    <div class="chart-wrap" style="height:200px">
+      <canvas id="socialChart"></canvas>
+    </div>
+    <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="font-family:var(--mono);font-size:18px;font-weight:500;color:var(--violet);min-width:48px">94%</div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.3">Ragazzi 8–16 anni con smartphone. 70% degli 8–10enni già attivi su social/streaming (MIMIT–Cattolica 2024)</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="font-family:var(--mono);font-size:18px;font-weight:500;color:var(--danger);min-width:48px">55%</div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.3">Genitori estremamente preoccupati per salute mentale degli adolescenti. Il 44% indica i social come principale fattore negativo.</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="font-family:var(--mono);font-size:18px;font-weight:500;color:var(--amber);min-width:48px">45%</div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.3">Adolescenti che dichiarano di "passare troppo tempo sui social". Deprivazione sonno: –2 ore/notte vs 20 anni fa.</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:8px 0">
+        <div style="font-family:var(--mono);font-size:18px;font-weight:500;color:var(--sky);min-width:48px">49,4%</div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.3">Giovani 18–25 anni che dichiarano ansia e depressione post-Covid. 54% ha vissuto stress da incapacità lavorativa/scolastica (Censis 2022).</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CRONACA LOCALE -->
+<div class="section-head">
+  <span class="section-num">10</span>
+  <h2 class="section-title">Segnali dalla Cronaca Locale — Parma</h2>
+  <div class="section-rule"></div>
+</div>
+
+<div class="card" style="border-left:3px solid var(--amber)">
+  <div class="card-title">Log cronistico 2023–2025 · episodi rilevanti per salute mentale in provincia</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:4px" id="cronacaGrid">
+    <!-- injected by JS -->
+  </div>
+  <div style="margin-top:20px;padding:14px;background:rgba(232,168,56,0.06);border:1px solid rgba(232,168,56,0.18);border-radius:1px">
+    <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--amber);margin-bottom:8px">NOTA METODOLOGICA — SOCIAL LISTENING</div>
+    <div style="font-size:12px;color:rgba(232,226,214,0.7);line-height:1.6">Il monitoraggio sistematico della cronaca locale (ParmaToday, Gazzetta di Parma, La Repubblica Parma) e dei social (gruppi Facebook locali, X/Twitter, TikTok) è un canale dati <strong style="color:var(--text)">non ancora strutturato</strong> in nessun osservatorio italiano di salute mentale. L'Osservatorio potrebbe istituire un <strong style="color:var(--text)">pannello di social listening</strong> trimestrale basato su keyword analysis (disagio, suicidio, aiuto, depressione + tag geografici Parma) e sentiment analysis AI — generando il <strong style="color:var(--text)">primo dataset pubblico</strong> su segnali di crisi non mediati dal sistema sanitario.</div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-left">"Esiste anche uno stigma tecnologico. I dati invisibili sono il problema che vogliamo rendere visibile."<br>
+  Federico Monaco PhD</div>
+  <div class="footer-right">
+    Osservatorio Dati Aperti Salute Mentale · Provincia di Parma<br>
+    Progetto Itaca Parma ODV · AUSL Parma DAISM-DP<br>
+    Fonti: Report DAISM-DP 2024 · SISEPS/SISM-ER · ISTAT · dati.salute.gov.it<br>
+    <a href="https://github.com/" target="_blank">GitHub Pages</a> · Licenza CC BY 4.0 · Aprile 2026
+  </div>
+</footer>
+
+<script>
+// ─── GLOBALS ───
+const amber   = '#e8a838';
+const rust    = '#c95f3a';
+const sage    = '#4fa87a';
+const sky     = '#4a9fd4';
+const violet  = '#8b72be';
+const danger  = '#d94f4f';
+const muted   = '#7a8694';
+const border  = '#2a3340';
+const text    = '#e8e2d6';
+
+Chart.defaults.color = muted;
+Chart.defaults.borderColor = border;
+Chart.defaults.font.family = "'DM Mono', monospace";
+Chart.defaults.font.size = 11;
+
+// ─── COUNT-UP ANIMATION ───
+function countUp(el) {
+  const target = parseInt(el.dataset.target);
+  const duration = 1600;
+  const step = 16;
+  let current = 0;
+  const increment = target / (duration / step);
+  const timer = setInterval(() => {
+    current += increment;
+    if (current >= target) { current = target; clearInterval(timer); }
+    el.textContent = Math.floor(current).toLocaleString('it-IT');
+  }, step);
+}
+
+// ─── DIAGNOSI LIST ───
+const diagnosi = [
+  { name: 'Schizofrenia e disturbi correlati', pct: 24.5, color: amber },
+  { name: 'Disturbo bipolare',                  pct: 17.1, color: violet },
+  { name: 'Disturbi della personalità',         pct: 14.0, color: sky },
+  { name: 'Disturbi depressivi',                pct: 11.2, color: sage },
+  { name: 'Disturbi dell\'alimentazione (DCA)', pct:  6.3, color: rust },
+  { name: 'Disturbi da uso di sostanze',        pct:  8.8, color: muted },
+  { name: 'Altro / NAS',                        pct: 18.1, color: border },
+];
+
+const dl = document.getElementById('diagList');
+diagnosi.forEach(d => {
+  const li = document.createElement('li');
+  li.className = 'diag-item';
+  li.innerHTML = `
+    <span class="diag-name">${d.name}</span>
+    <span class="diag-pct">${d.pct}%</span>
+    <div class="diag-bar-wrap" style="grid-column:1/-1">
+      <div class="diag-bar" style="width:0%;background:${d.color}" data-width="${d.pct / 24.5 * 100}"></div>
+    </div>`;
+  dl.appendChild(li);
+});
+
+// ─── STRANIERI COMPARE ───
+const stranieriData = [
+  { label: 'Popolazione generale', pct: 18, color: amber },
+  { label: 'Schizofrenia', pctIt: 24.5, pctStr: 12.6, color: violet, type: 'compare' },
+  { label: 'Dist. organici', pctIt: 3.2, pctStr: 11.9, color: sky, type: 'compare' },
+  { label: 'Uso di sostanze', pctIt: 5.8, pctStr: 11.1, color: rust, type: 'compare' },
+];
+
+const sw = document.getElementById('stranieriCompare');
+// Share row
+sw.innerHTML = `
+  <div style="margin-bottom:8px">
+    <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Quota stranieri sul totale utenti</div>
+    <div class="compare-row">
+      <span class="compare-label">Stranieri</span>
+      <div class="compare-bar-outer"><div class="compare-bar-inner" style="width:0%;background:${amber}" data-width="18"></div></div>
+      <span class="compare-val" style="color:${amber}">18%</span>
+    </div>
+  </div>
+  <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;margin-top:8px">Confronto diagnosi — italiani vs stranieri</div>
+  <div class="compare-row">
+    <span class="compare-label">Schizofrenia<br><em style="font-size:9px">It. 24.5%</em></span>
+    <div class="compare-bar-outer"><div class="compare-bar-inner" style="width:0%;background:${violet}" data-width="${12.6/24.5*100}"></div></div>
+    <span class="compare-val" style="color:${violet}">12,6%</span>
+  </div>
+  <div class="compare-row">
+    <span class="compare-label">Dist. organici<br><em style="font-size:9px">It. 3.2%</em></span>
+    <div class="compare-bar-outer"><div class="compare-bar-inner" style="width:0%;background:${sky}" data-width="${11.9/24.5*100}"></div></div>
+    <span class="compare-val" style="color:${sky}">11,9%</span>
+  </div>
+  <div class="compare-row">
+    <span class="compare-label">Uso sostanze<br><em style="font-size:9px">It. 5.8%</em></span>
+    <div class="compare-bar-outer"><div class="compare-bar-inner" style="width:0%;background:${rust}" data-width="${11.1/24.5*100}"></div></div>
+    <span class="compare-val" style="color:${rust}">11,1%</span>
+  </div>
+`;
+
+// ─── INTERSECTION OBSERVER (trigger animations) ───
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (!e.isIntersecting) return;
+    // count-up
+    e.target.querySelectorAll('.count-up').forEach(el => countUp(el));
+    // bar animations
+    e.target.querySelectorAll('.diag-bar[data-width]').forEach(el => {
+      setTimeout(() => { el.style.width = el.dataset.width + '%'; }, 200);
+    });
+    e.target.querySelectorAll('.compare-bar-inner[data-width]').forEach(el => {
+      setTimeout(() => { el.style.width = el.dataset.width + '%'; }, 300);
+    });
+    observer.unobserve(e.target);
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.kpi-strip, .card').forEach(el => observer.observe(el));
+
+// ─── CHART: TREND ───
+new Chart(document.getElementById('trendChart'), {
+  type: 'bar',
+  data: {
+    labels: ['2020', '2021', '2022', '2023', '2024'],
+    datasets: [
+      {
+        label: 'Psichiatria adulti (SMA)',
+        data: [14820, 15340, 17060, 17418, 17634],
+        backgroundColor: `rgba(232,168,56,0.25)`,
+        borderColor: amber,
+        borderWidth: 1.5,
+        borderRadius: 2,
+      },
+      {
+        label: 'Dipendenze (DP)',
+        data: [3200, 3380, 3510, 3620, 3780],
+        backgroundColor: `rgba(79,168,122,0.2)`,
+        borderColor: sage,
+        borderWidth: 1.5,
+        borderRadius: 2,
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'top', labels: { color: muted, boxWidth: 10, padding: 16 } }, tooltip: { backgroundColor: '#1c2330', borderColor: border, borderWidth: 1 } },
+    scales: {
+      x: { grid: { color: border }, ticks: { color: muted } },
+      y: { grid: { color: border }, ticks: { color: muted }, beginAtZero: false, min: 12000 }
+    }
+  }
+});
+
+// ─── CHART: GENDER ───
+new Chart(document.getElementById('genderChart'), {
+  type: 'bar',
+  data: {
+    labels: ['DCA', 'Disturbi depressivi', 'Dist. personalità', 'Schizofrenia', 'Disturbo bipolare', 'Uso sostanze'],
+    datasets: [
+      { label: 'Donne %', data: [94, 66.7, 58, 38, 49, 32], backgroundColor: `rgba(139,114,190,0.6)`, borderColor: violet, borderWidth: 1, borderRadius: 2 },
+      { label: 'Uomini %', data: [6, 33.3, 42, 62, 51, 68], backgroundColor: `rgba(74,159,212,0.4)`, borderColor: sky, borderWidth: 1, borderRadius: 2 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1c2330', borderColor: border, borderWidth: 1 } },
+    scales: {
+      x: { stacked: true, grid: { display: false }, ticks: { color: muted, maxRotation: 35 } },
+      y: { stacked: true, grid: { color: border }, ticks: { color: muted }, max: 100 }
+    },
+    indexAxis: 'y'
+  }
+});
+
+// ─── CHART: ETA ───
+new Chart(document.getElementById('etaChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Italiani', 'Stranieri'],
+    datasets: [{
+      label: 'Età media',
+      data: [37, 23],
+      backgroundColor: [amber + '55', sage + '55'],
+      borderColor: [amber, sage],
+      borderWidth: 2,
+      borderRadius: 3,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1c2330', borderColor: border, borderWidth: 1 } },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: text } },
+      y: { grid: { color: border }, ticks: { color: muted }, max: 50, title: { display: true, text: 'anni', color: muted } }
+    }
+  }
+});
+
+// ─── CHART: OSPEDALE ───
+new Chart(document.getElementById('hospChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Consulenze PS', 'Consulenze reparti', 'Consulenze minori'],
+    datasets: [{
+      data: [1780, 925, 95],
+      backgroundColor: [amber + 'cc', sky + 'cc', violet + 'cc'],
+      borderColor: '#0d1117',
+      borderWidth: 3,
+      hoverOffset: 8,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    cutout: '68%',
+    plugins: {
+      legend: { position: 'bottom', labels: { color: muted, padding: 20, boxWidth: 10 } },
+      tooltip: { backgroundColor: '#1c2330', borderColor: border, borderWidth: 1 }
+    }
+  }
+});
+
+// ─── CHART: RETE DAISM-DP ───
+new Chart(document.getElementById('reteChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Punti ambulatoriali\ntotali', 'CSM adulti\n(SMA)', 'Ambulatori\nNPIA', 'Ambulatori\nDipendenze', 'Residenze\ntotali', 'Residenze\nSMA'],
+    datasets: [{
+      data: [41, 4, 12, 11, 22, 18],
+      backgroundColor: [amber+'99', amber+'77', sage+'66', rust+'66', sky+'66', sky+'44'],
+      borderColor: [amber, amber, sage, rust, sky, sky],
+      borderWidth: 1.5,
+      borderRadius: 3,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1c2330', borderColor: border, borderWidth: 1 } },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: muted, maxRotation: 0 } },
+      y: { grid: { color: border }, ticks: { color: muted }, beginAtZero: true }
+    }
+  }
+});
+
+// ─── CHART: AUDIT PIE ───
+new Chart(document.getElementById('auditChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Aperto', 'Parziale (PDF/report)', 'Chiuso'],
+    datasets: [{
+      data: [2, 3, 5],
+      backgroundColor: [sage + 'cc', amber + 'cc', danger + 'cc'],
+      borderColor: '#0d1117',
+      borderWidth: 3,
+      hoverOffset: 8,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    cutout: '62%',
+    plugins: {
+      legend: { display: false },
+      tooltip: { backgroundColor: '#1c2330', borderColor: border, borderWidth: 1,
+        callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} fonti` }
+      }
+    }
+  }
+});
+
+// ─── CHART: FUNDING ───
+new Chart(document.getElementById('fundingChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Anno 1\nCariparma', 'Anno 2\nMinistero/RER', 'Anno 3+\nHorizon/EU4H'],
+    datasets: [{
+      label: 'Budget minimo (€)',
+      data: [49000, 100000, 500000],
+      backgroundColor: [sage + '55', amber + '55', sky + '55'],
+      borderColor: [sage, amber, sky],
+      borderWidth: 2,
+      borderRadius: 4,
+    },
+    {
+      label: 'Budget massimo (€)',
+      data: [80000, 150000, 1000000],
+      backgroundColor: [sage + '22', amber + '22', sky + '22'],
+      borderColor: [sage + '44', amber + '44', sky + '44'],
+      borderWidth: 1,
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', labels: { color: muted, boxWidth: 10, padding: 12 } },
+      tooltip: { backgroundColor: '#1c2330', borderColor: border, borderWidth: 1,
+        callbacks: { label: ctx => ` €${ctx.parsed.y.toLocaleString('it-IT')}` }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: muted, maxRotation: 0 } },
+      y: { grid: { color: border }, ticks: { color: muted,
+        callback: v => v >= 1000000 ? '€1M' : v >= 1000 ? `€${v/1000}k` : `€${v}`
+      }, beginAtZero: true }
+    }
+  }
+});
+
+// ─── CHART: SUICIDI TREND ───
+new Chart(document.getElementById('suicidiChart'), {
+  type: 'line',
+  data: {
+    labels: ['2020','2021','2022','2023','2024'],
+    datasets: [
+      {
+        label: 'Suicidi completati',
+        data: [28, 30, 32, 33, 35],
+        borderColor: danger,
+        backgroundColor: danger + '20',
+        fill: true,
+        tension: 0.35,
+        pointBackgroundColor: danger,
+        pointRadius: 5,
+        borderWidth: 2,
+      },
+      {
+        label: 'Di cui in cura al DSM',
+        data: [null, null, null, null, 7],
+        borderColor: sage,
+        backgroundColor: sage + '30',
+        fill: false,
+        tension: 0,
+        pointBackgroundColor: sage,
+        pointRadius: [0,0,0,0,7],
+        borderWidth: 0,
+        pointStyle: 'rectRot',
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'top', labels: { color: muted, boxWidth: 10, padding: 14 } }, tooltip: { backgroundColor: '#1c2330', borderColor: border, borderWidth: 1 } },
+    scales: {
+      x: { grid: { color: border }, ticks: { color: muted } },
+      y: { grid: { color: border }, ticks: { color: muted }, min: 0, max: 50 }
+    }
+  }
+});
+
+// ─── CHART: AUTOLESIONISMO ───
+new Chart(document.getElementById('autolesChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Consulenze minori\nParma 2022', 'Consulenze minori\nParma 2023', 'Consulenze minori\nParma 2024', 'Accessi NPI PS\nnaz. 2022'],
+    datasets: [{
+      data: [45, 65, 95, 1580],
+      backgroundColor: [violet+'55', violet+'77', danger+'99', rust+'55'],
+      borderColor: [violet, violet, danger, rust],
+      borderWidth: 1.5, borderRadius: 3,
+      yAxisID: 'y',
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1c2330', borderColor: border, borderWidth: 1 } },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: muted, maxRotation: 0, font: { size: 9 } } },
+      y: { grid: { color: border }, ticks: { color: muted }, beginAtZero: true }
+    }
+  }
+});
+
+// ─── CHART: ALTRI ENTI ───
+new Chart(document.getElementById('entiChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Medico di base (MMG)', 'Pronto Soccorso', 'Auto-invio', 'Servizi Sociali', 'Scuole/Carcere/FdO'],
+    datasets: [{
+      data: [35, 28, 20, 10, 7],
+      backgroundColor: [amber+'cc', danger+'aa', sage+'aa', sky+'aa', violet+'aa'],
+      borderColor: '#0d1117', borderWidth: 3, hoverOffset: 8,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    cutout: '60%',
+    plugins: {
+      legend: { position: 'bottom', labels: { color: muted, padding: 10, boxWidth: 8, font: { size: 10 } } },
+      tooltip: { backgroundColor: '#1c2330', borderColor: border, borderWidth: 1,
+        callbacks: { label: ctx => ` ${ctx.label}: ~${ctx.parsed}%` }
+      }
+    }
+  }
+});
+
+// ─── CHART: LAVORO ───
+new Chart(document.getElementById('lavoroChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Q1 2023', 'Q1 2024'],
+    datasets: [
+      { label: 'Denunce INAIL malattie psichiche (×100)', data: [186.6, 220.0], backgroundColor: amber+'66', borderColor: amber, borderWidth: 1.5, borderRadius: 3 },
+      { label: 'Burnout operatori sanitari %', data: [45, 49.6], backgroundColor: rust+'55', borderColor: rust, borderWidth: 1.5, borderRadius: 3 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'top', labels: { color: muted, boxWidth: 10, padding: 12, font: { size: 10 } } }, tooltip: { backgroundColor: '#1c2330', borderColor: border, borderWidth: 1 } },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: muted } },
+      y: { grid: { color: border }, ticks: { color: muted }, beginAtZero: true }
+    }
+  }
+});
+
+// ─── CHART: SOCIAL ───
+new Chart(document.getElementById('socialChart'), {
+  type: 'radar',
+  data: {
+    labels: ['Uso smartphone\n(% ragazzi 8-16)', 'Preoccupazione\ngenitori', 'Ansia/dep.\n18-25 anni', 'Troppo tempo\nsocial (autodich.)', 'Impatto neg.\nidentificato'],
+    datasets: [{
+      label: '% indicatore 2024',
+      data: [94, 55, 49.4, 45, 44],
+      backgroundColor: violet + '25',
+      borderColor: violet,
+      pointBackgroundColor: violet,
+      pointRadius: 4,
+      borderWidth: 2,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1c2330', borderColor: border, borderWidth: 1 } },
+    scales: {
+      r: {
+        grid: { color: border },
+        angleLines: { color: border },
+        pointLabels: { color: muted, font: { size: 9 } },
+        ticks: { color: muted, backdropColor: 'transparent', stepSize: 25 },
+        min: 0, max: 100,
+      }
+    }
+  }
+});
+
+// ─── CRONACA GRID ───
+const cronacaEvents = [
+  { date: 'Gen 2025', tipo: 'Carcere', color: danger, text: 'Report Antigone: 3 suicidi nel carcere di Parma nel 2024, tra i più alti in Italia. Autolesionismo +24% su anno precedente.' },
+  { date: 'Ott 2024', tipo: 'Statistiche', color: amber, text: 'Pubblicazione dati DAISM-DP 2024: 35 suicidi in provincia, >100 TSO, +14% ricoveri. Il 20% dei suicidi era in cura al DSM.' },
+  { date: 'Giu 2024', tipo: 'Politica sanitaria', color: sage, text: 'AUSL Parma riceve €5,88M dal Piano Attuativo Regionale 2024 per salute mentale. Annunciata "Casa Faro" per DCA.' },
+  { date: 'Mag 2024', tipo: 'Giovani', color: violet, text: 'Allarme DCA minori: 448 accessi PS nel 2023, +35% su 2021. Il 28% sono minorenni, il 90% ragazze. Età media 15 anni.' },
+  { date: 'Feb 2024', tipo: 'Lavoro', color: sky, text: 'INAIL: +17,9% denunce malattie psichiche in Q1 2024. Emilia-Romagna è la 3ª regione per incidenza di disagio lavorativo (9,4%).' },
+  { date: 'Gen 2023', tipo: 'Sistema', color: rust, text: 'Pietro Pellegrini (dir. DAISM-DP): "Disagio sociale in forte aumento, siamo sotto pressione. Il sistema pubblico non raggiunge l\'intera popolazione". Richiesta di risposta di comunità.' },
+  { date: 'Ott 2022', tipo: 'Social/Giovani', color: violet, text: 'Post-Covid: +40% accessi PS per problematiche mentali tra giovani a livello nazionale. Tendenza confermata anche per Parma con aumento NPIA.' },
+  { date: 'Continuo', tipo: 'Social listening', color: amber, text: '⚠ Dato mancante: nessun sistema di monitoraggio sistematico di segnali di disagio su social media locali, forum, gruppi Facebook Parma. Gap da colmare con AI.' },
+];
+
+const grid = document.getElementById('cronacaGrid');
+cronacaEvents.forEach((e, i) => {
+  const div = document.createElement('div');
+  div.style.cssText = `padding:14px;background:var(--surface2);border:1px solid var(--border);border-top:2px solid ${e.color};animation:fadeUp 0.5s ease both;animation-delay:${i*0.07}s`;
+  div.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-family:var(--mono);font-size:9px;letter-spacing:1.5px;color:${e.color};text-transform:uppercase">${e.tipo}</span>
+      <span style="font-family:var(--mono);font-size:9px;color:var(--muted)">${e.date}</span>
+    </div>
+    <p style="font-size:11.5px;color:rgba(232,226,214,0.78);line-height:1.55">${e.text}</p>`;
+  grid.appendChild(div);
+});
+
+
+document.querySelectorAll('.card').forEach((card, i) => {
+  card.style.animationDelay = `${i * 0.06}s`;
+});
+</script>
+</body>
+</html>
