@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ODASM · Mappa 3D della Provincia di Parma</title>
+<style>
+:root{color-scheme:light dark;--bg:#f4f1ea;--fg:#1d1d1f;--card:#ffffffd9;--mut:#5f6673;--line:#00000022;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171c;--fg:#eceff4;--card:#1e232bd9;--mut:#9aa3b2;--line:#ffffff22}}
+:root[data-theme="dark"]{--bg:#14171c;--fg:#eceff4;--card:#1e232bd9;--mut:#9aa3b2;--line:#ffffff22}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:980px;margin:0 auto;padding:16px}
+h1{font-size:1.45rem;margin:.2rem 0}
+.sub{color:var(--mut);margin:0 0 12px;font-size:.9rem}
+#wrap{position:relative;height:58vh;min-height:340px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:linear-gradient(var(--bg),var(--card))}
+canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+button{font:inherit;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer}
+button.on{background:var(--fg);color:var(--bg)}
+.leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.85rem;color:var(--mut);margin-bottom:6px}
+.leg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+#info{min-height:3.2em;padding:10px 12px;border-radius:10px;background:var(--card);border:1px solid var(--line);font-size:.92rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:16px 0}
+.k{padding:12px;border-radius:12px;background:var(--card);border:1px solid var(--line)}
+.k b{display:block;font-size:1.5rem}
+.k span{font-size:.8rem;color:var(--mut)}
+h2{font-size:1.1rem;margin:20px 0 6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:4px 10px;border-radius:999px;font-size:.8rem;border:1px solid var(--line);background:var(--card)}
+.chip::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--c)}
+p.n{color:var(--mut);font-size:.82rem}
+</style>
+</head>
+<body>
+<main>
+<h1>Salute mentale in provincia di Parma — mappa 3D</h1>
+<p class="sub">Esempio di neogeografia: dati aperti ODASM + geometrie schematiche, esplorabili in 3D. Trascina per ruotare, pizzica o usa la rotella per lo zoom, tocca una cella per i dettagli.</p>
+
+<div id="wrap"><canvas id="c"></canvas></div>
+
+<div class="bar">
+  <button id="m1" class="on">Distretti</button>
+  <button id="m2">Distanza dal CSM</button>
+  <button id="lab" class="on">Etichette</button>
+</div>
+<div class="leg" id="leg"></div>
+<div id="info">Tocca o passa il mouse su una cella del territorio.</div>
+
+<div class="grid">
+  <div class="k"><b>3,5%</b><span>popolazione provinciale in carico (448.865 ab.)</span></div>
+  <div class="k"><b>542</b><span>ricoveri psichiatrici 2024 (+14%)</span></div>
+  <div class="k"><b>1.780</b><span>consulenze al Pronto Soccorso</span></div>
+  <div class="k"><b>7 su 35</b><span>suicidi 2024 con presa in carico DSM (20%)</span></div>
+</div>
+
+<h2>Come leggere la mappa</h2>
+<p><b>Distretti:</b> ogni cella è assegnata al Distretto sanitario più vicino (Parma, Fidenza, Sud Est, Valli Taro e Ceno); il rilievo cresce verso l’Appennino. <b>Distanza dal CSM:</b> l’altezza e il colore indicano i km in linea d’aria dal Centro di Salute Mentale più vicino: le valli appenniniche emergono come “montagne” di distanza dai servizi.</p>
+
+<h2>Accessibilità dei dati (audit ODASM)</h2>
+<div class="chips" id="chips"></div>
+
+<p class="n">Geometrie semplificate e illustrative (non sono confini amministrativi ufficiali); le sedi CSM sono posizionate approssimativamente sui comuni. Per l’analisi usare i confini ISTAT/OpenStreetMap. Il rilievo è decorativo; l’unico dato calcolato è la distanza in linea d’aria. Fonti dei dati: dashboard ODASMPR (Report DAISM-DP 2024, ISTAT) — licenza CC BY-NC-SA 4.0.</p>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+const R=Math.cos(44.7*Math.PI/180)*111.32,K=110.57;
+const pr=(lo,la)=>[(lo-9.95)*R,-(la-44.7)*K];
+const poly=[[9.76,45.00],[9.98,45.03],[10.2,44.97],[10.4,44.94],[10.52,44.88],[10.50,44.72],[10.46,44.56],[10.36,44.42],[10.15,44.40],[9.95,44.37],[9.70,44.38],[9.50,44.40],[9.38,44.47],[9.48,44.60],[9.62,44.66],[9.70,44.78],[9.68,44.92]].map(p=>pr(p[0],p[1]));
+const D=[
+ {n:'Parma',c:0xe8743b,s:pr(10.33,44.80)},
+ {n:'Fidenza',c:0x4aa3df,s:pr(10.05,44.87)},
+ {n:'Sud Est',c:0x9b6bd6,s:pr(10.30,44.57)},
+ {n:'Valli Taro e Ceno',c:0x3fb27f,s:pr(9.65,44.52)}];
+const CSM=[
+ {n:'CSM Parma Est',p:pr(10.35,44.80)},{n:'CSM Parma Nord-Ovest',p:pr(10.30,44.82)},
+ {n:'CSM Fidenza',p:pr(10.06,44.87)},{n:'CSM Langhirano',p:pr(10.26,44.61)},{n:'CSM Fornovo',p:pr(10.10,44.70)}];
+const TW=[['Parma',10.33,44.80],['Fidenza',10.06,44.87],['Langhirano',10.26,44.61],['Fornovo',10.10,44.70],['Borgotaro',9.78,44.49],['Salsomaggiore',9.98,44.82],['Busseto',10.04,44.98],['Colorno',10.37,44.93],['Traversetolo',10.38,44.64],['Bardi',9.73,44.63]];
+
+function inside(x,z){let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const[a,b]=poly[i],[d,e]=poly[j];if((b>z)!=(e>z)&&x<(d-a)*(z-b)/(e-b)+a)c=!c}return c}
+const S=2.0,cells=[];
+const xs=poly.map(p=>p[0]),zs=poly.map(p=>p[1]);
+for(let x=Math.min(...xs);x<Math.max(...xs);x+=S)for(let z=Math.min(...zs);z<Math.max(...zs);z+=S){
+  const cx=x+S/2,cz=z+S/2;if(!inside(cx,cz))continue;
+  let bd=0,bm=1e9;D.forEach((d,i)=>{const m=Math.hypot(cx-d.s[0],cz-d.s[1]);if(m<bm){bm=m;bd=i}});
+  let dist=1e9;CSM.forEach(m=>{dist=Math.min(dist,Math.hypot(cx-m.p[0],cz-m.p[1]))});
+  cells.push({x:cx,z:cz,d:bd,dist,rel:0.6+Math.max(0,cz)*0.1});
+}
+const N=cells.length,maxD=Math.max(...cells.map(c=>c.dist));
+
+const cv=document.getElementById('c'),wrap=document.getElementById('wrap');
+const ren=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});
+ren.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(40,1,1,600);
+scene.add(new THREE.AmbientLight(0xffffff,.75));
+const dl=new THREE.DirectionalLight(0xffffff,.8);dl.position.set(-40,80,30);scene.add(dl);
+
+const mesh=new THREE.InstancedMesh(new THREE.BoxGeometry(S*.94,1,S*.94),new THREE.MeshLambertMaterial({color:0xffffff}),N);
+scene.add(mesh);
+const cur=new Float32Array(N).fill(.1),tgt=new Float32Array(N),dm=new THREE.Object3D(),col=new THREE.Color();
+let mode=1,moving=true;
+function paint(){
+  cells.forEach((c,i)=>{
+    if(mode===1){tgt[i]=c.rel;col.setHex(D[c.d].c)}
+    else{const t=c.dist/maxD;tgt[i]=.6+c.dist*.5;col.setHSL(.5-.5*t,.65,.5)}
+    mesh.setColorAt(i,col);
+  });
+  mesh.instanceColor.needsUpdate=true;moving=true;
+  document.getElementById('leg').innerHTML=mode===1
+   ?D.map(d=>'<span><i style="background:#'+d.c.toString(16).padStart(6,'0')+'"></i>'+d.n+'</span>').join('')
+   :'<span><i style="background:hsl(180,65%,50%)"></i>vicino al CSM</span><span><i style="background:hsl(90,65%,50%)"></i>media distanza</span><span><i style="background:hsl(0,65%,50%)"></i>lontano (max '+maxD.toFixed(0)+' km)</span>';
+}
+function upd(){
+  let ch=false;
+  for(let i=0;i<N;i++){const d=tgt[i]-cur[i];if(Math.abs(d)>.005){cur[i]+=d*.15;ch=true}else cur[i]=tgt[i];
+    dm.position.set(cells[i].x,cur[i]/2,cells[i].z);dm.scale.set(1,Math.max(cur[i],.05),1);dm.updateMatrix();mesh.setMatrixAt(i,dm.matrix)}
+  mesh.instanceMatrix.needsUpdate=true;moving=ch;
+}
+
+const pins=new THREE.Group();scene.add(pins);
+CSM.forEach(m=>{
+  const p=new THREE.Mesh(new THREE.CylinderGeometry(.18,.18,9,8),new THREE.MeshBasicMaterial({color:0xffd84a}));p.position.set(m.p[0],4.5,m.p[1]);pins.add(p);
+  const s=new THREE.Mesh(new THREE.SphereGeometry(.9,16,12),new THREE.MeshBasicMaterial({color:0xffd84a}));s.position.set(m.p[0],9.4,m.p[1]);pins.add(s);
+});
+const labels=new THREE.Group();scene.add(labels);
+function sprite(t){
+  const c=document.createElement('canvas');c.width=256;c.height=64;const g=c.getContext('2d');
+  g.font='bold 28px system-ui,sans-serif';g.textAlign='center';g.lineWidth=6;g.strokeStyle='rgba(0,0,0,.75)';g.strokeText(t,128,40);g.fillStyle='#fff';g.fillText(t,128,40);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthTest:false,transparent:true}));sp.scale.set(14,3.5,1);return sp;
+}
+TW.forEach(t=>{const[x,z]=pr(t[1],t[2]);const s=sprite(t[0]);s.position.set(x,13,z);labels.add(s)});
+
+let th=.5,ph=.95,rad=120;
+function setCam(){cam.position.set(rad*Math.sin(ph)*Math.sin(th),rad*Math.cos(ph),rad*Math.sin(ph)*Math.cos(th));cam.lookAt(0,0,0)}
+function size(){const w=wrap.clientWidth,h=wrap.clientHeight;ren.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}
+addEventListener('resize',size);size();setCam();
+
+const ptr=new Map();let moved=0,pd=0;
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptr.set(e.pointerId,[e.clientX,e.clientY]);moved=0;if(ptr.size===2){const a=[...ptr.values()];pd=Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1])}});
+cv.addEventListener('pointermove',e=>{
+  if(!ptr.has(e.pointerId)){pick(e);return}
+  const o=ptr.get(e.pointerId);
+  if(ptr.size===1){th-=(e.clientX-o[0])*.006;ph=Math.min(1.45,Math.max(.15,ph-(e.clientY-o[1])*.006))}
+  ptr.set(e.pointerId,[e.clientX,e.clientY]);moved+=Math.abs(e.clientX-o[0])+Math.abs(e.clientY-o[1]);
+  if(ptr.size===2){const a=[...ptr.values()],d=Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1]);rad=Math.min(260,Math.max(40,rad*pd/d));pd=d}
+  setCam();
+});
+cv.addEventListener('pointerup',e=>{ptr.delete(e.pointerId);if(moved<6)pick(e)});
+cv.addEventListener('pointercancel',e=>ptr.delete(e.pointerId));
+cv.addEventListener('wheel',e=>{e.preventDefault();rad=Math.min(260,Math.max(40,rad*(1+e.deltaY*.001)));setCam()},{passive:false});
+
+const rc=new THREE.Raycaster(),mv=new THREE.Vector2(),info=document.getElementById('info');
+function pick(e){
+  const r=cv.getBoundingClientRect();mv.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height*2-1));
+  rc.setFromCamera(mv,cam);const h=rc.intersectObject(mesh)[0];if(!h)return;
+  const c=cells[h.instanceId],d=D[c.d];
+  info.innerHTML='<b>Distretto '+d.n+'</b><br>Distanza in linea d’aria dal CSM più vicino: <b>'+c.dist.toFixed(1)+' km</b>. '+(c.dist>20?'Area periferica rispetto alla rete dei servizi.':c.dist<6?'Area ben coperta dalla rete CSM.':'Copertura intermedia.');
+}
+document.getElementById('m1').onclick=e=>{mode=1;sw(e.target);paint()};
+document.getElementById('m2').onclick=e=>{mode=2;sw(e.target);paint()};
+document.getElementById('lab').onclick=e=>{e.target.classList.toggle('on');labels.visible=e.target.classList.contains('on')};
+function sw(b){document.getElementById('m1').classList.remove('on');document.getElementById('m2').classList.remove('on');b.classList.add('on')}
+
+const A=[['Report annuale DAISM-DP','#e0a82e'],['SDO psichiatriche','#d9534f'],['TSO per distretto e anno','#d9534f'],['SISM Emilia-Romagna','#e0a82e'],['Tempi attesa CUP','#e0a82e'],['PASSI / sorveglianza','#3fb27f'],['ISTAT Health for All / BES','#3fb27f'],['Accessi PS crisi psichiatrica','#d9534f']];
+document.getElementById('chips').innerHTML=A.map(a=>'<span class="chip" style="--c:'+a[1]+'">'+a[0]+'</span>').join('')+'<p class="n" style="width:100%;margin:6px 0 0">Verde: aperto · Giallo: parziale (PDF/aggregato) · Rosso: chiuso. I dati per distretto non sono pubblici: per questo la mappa usa la geografia dei servizi, non gli esiti.</p>';
+
+paint();
+(function loop(){requestAnimationFrame(loop);if(moving)upd();ren.render(scene,cam)})();
+})();
+</script>
+</body>
+</html>
