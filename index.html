@@ -786,7 +786,237 @@ footer {
     </div>
   </div>
 </div>
+<!-- ===== ODASM · Mappa 3D a spike · INCOLLA QUESTO BLOCCO DOVE VUOI NELLA PAGINA (es. dentro la sezione 04) ===== -->
+<!-- Autonomo: stili con prefisso .osm, id con prefisso osm-, three.js caricato da solo se non presente. -->
+<section class="osm" id="osm-root">
+<style>
+.osm{--osm-fg:#1d1d1f;--osm-card:rgba(255,255,255,.85);--osm-bg:#f4f1ea;--osm-mut:#5f6673;--osm-line:rgba(0,0,0,.14);margin:24px 0;color:var(--osm-fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+@media (prefers-color-scheme:dark){.osm{--osm-fg:#eceff4;--osm-card:rgba(30,35,43,.85);--osm-bg:#14171c;--osm-mut:#9aa3b2;--osm-line:rgba(255,255,255,.16)}}
+/* Se il sito è sempre scuro, togli il commento: .osm{--osm-fg:#eceff4;--osm-card:rgba(30,35,43,.85);--osm-bg:#14171c;--osm-mut:#9aa3b2;--osm-line:rgba(255,255,255,.16)} */
+.osm *{box-sizing:border-box}
+.osm h3{font-size:1.25rem;margin:.2rem 0}
+.osm .osm-sub{color:var(--osm-mut);margin:0 0 12px;font-size:.9rem}
+.osm #osm-wrap{position:relative;height:60vh;min-height:340px;border-radius:14px;overflow:hidden;border:1px solid var(--osm-line);background:linear-gradient(var(--osm-bg),var(--osm-card))}
+.osm canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+.osm .osm-bar{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;align-items:center}
+.osm button{font:inherit;padding:6px 12px;border-radius:999px;border:1px solid var(--osm-line);background:var(--osm-card);color:var(--osm-fg);cursor:pointer}
+.osm button.on{background:var(--osm-fg);color:var(--osm-bg)}
+.osm button.osm-cat{display:inline-flex;align-items:center;gap:6px}
+.osm button.osm-cat i{width:11px;height:11px;border-radius:50%;background:var(--c)}
+.osm button.osm-cat:not(.on){opacity:.45}
+.osm button.osm-cat.on{background:var(--osm-card);color:var(--osm-fg);border-color:var(--c)}
+.osm #osm-info{min-height:3.4em;padding:10px 12px;border-radius:10px;background:var(--osm-card);border:1px solid var(--osm-line);font-size:.92rem;margin-top:8px}
+.osm details{margin-top:14px}
+.osm textarea{width:100%;min-height:150px;font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;background:var(--osm-card);color:var(--osm-fg);border:1px solid var(--osm-line);border-radius:10px;padding:8px}
+.osm p.osm-n{color:var(--osm-mut);font-size:.82rem}
+</style>
 
+<h3>Persone in carico stimate per comune — mappa a spike 3D</h3>
+<p class="osm-sub">Ogni spike è un luogo; i segmenti colorati sono le categorie (qui i Distretti). Trascina per ruotare, pizzica o rotella per lo zoom, tocca uno spike per i dettagli.</p>
+
+<div id="osm-wrap"><canvas id="osm-c"></canvas></div>
+
+<div class="osm-bar" id="osm-cats"></div>
+<div class="osm-bar">
+  <span style="color:var(--osm-mut);font-size:.85rem">Scala altezza:</span>
+  <button id="osm-sq" class="on">Radice</button>
+  <button id="osm-li">Lineare</button>
+  <button id="osm-lab" class="on">Etichette</button>
+</div>
+<div id="osm-info">Tocca uno spike per vedere luogo, categoria e numero.</div>
+
+<details>
+<summary>Dati (modificabili) · formato: luogo ; latitudine ; longitudine ; categoria ; numero</summary>
+<p class="osm-n">Incolla qui il tuo log (una riga per luogo+categoria, separatore “;” o tabulazione, decimali con il punto) e premi Applica. Una nuova categoria nasce usando un nuovo nome.</p>
+<textarea id="osm-data" spellcheck="false"></textarea>
+<div class="osm-bar">
+  <button id="osm-apply">Applica dati</button>
+  <button id="osm-stima">Stima per comune</button>
+  <button id="osm-odasm">Dati reali ospedale</button>
+  <button id="osm-demo">Aggiungi dati DEMO</button>
+</div>
+</details>
+
+<p class="osm-n"><b>Stima per comune (vista predefinita):</b> persone in carico attese = popolazione residente × 3,5% (quota provinciale dichiarata dalla dashboard ODASM), con popolazioni Tuttitalia/ISTAT (dati stimati) e colori per Distretto. È un modello a tasso uniforme, non un dato osservato: la mappa riproduce la distribuzione della popolazione, mentre i tassi reali per comune sono probabilmente diversi (e non pubblici). L’assegnazione dei comuni ai Distretti parte dall’elenco della dashboard ed è completata a mano: da verificare. Coordinate approssimative.</p>
+<p class="osm-n"><b>Dati reali dell’ospedale</b> (Report DAISM-DP 2024 dalla dashboard ODASM): ricoveri, TSO (“&gt;100”, usato 100), consulenze PS e altre consulenze dell’Ospedale Maggiore; 3 suicidi nel Carcere di Parma. Posizioni approssimative. Le categorie non sono sempre disgiunte (i TSO sono in parte inclusi nei ricoveri). Le righe “DEMO” sono numeri inventati. Geometrie provinciali schematiche, non ufficiali.</p>
+
+<script>
+(function(){
+function start(){
+const ODASM=`Ospedale Maggiore (SPDC);44.8110;10.3150;Ricoveri psichiatrici;542
+Ospedale Maggiore (SPDC);44.8110;10.3150;TSO;100
+Ospedale Maggiore (SPDC);44.8110;10.3150;Consulenze Pronto Soccorso;1780
+Ospedale Maggiore (SPDC);44.8110;10.3150;Altre consulenze;925
+Carcere di Parma;44.8135;10.3400;Suicidi;3`;
+const DEMO=`Fidenza;44.8680;10.0630;Cronaca locale (DEMO);9
+Fidenza;44.8680;10.0630;Segnalazioni scuole (DEMO);14
+Salsomaggiore;44.8160;9.9780;Cronaca locale (DEMO);4
+Busseto;44.9780;10.0400;Cronaca locale (DEMO);3
+Colorno;44.9330;10.3700;Segnalazioni scuole (DEMO);6
+Collecchio;44.7500;10.2200;Cronaca locale (DEMO);5
+Langhirano;44.6100;10.2600;Segnalazioni scuole (DEMO);7
+Langhirano;44.6100;10.2600;Cronaca locale (DEMO);2
+Fornovo;44.7000;10.1000;Cronaca locale (DEMO);6
+Borgotaro;44.4900;9.7800;Cronaca locale (DEMO);3
+Borgotaro;44.4900;9.7800;Segnalazioni scuole (DEMO);4
+Parma centro;44.8010;10.3280;Cronaca locale (DEMO);38
+Parma centro;44.8010;10.3280;Segnalazioni scuole (DEMO);21`;
+const STIMA=`Parma;44.8015;10.3279;Distretto Parma;6981
+Colorno;44.9333;10.3667;Distretto Parma;321
+Sorbolo Mezzani;44.8500;10.4333;Distretto Parma;461
+Torrile;44.8833;10.4000;Distretto Parma;270
+Fidenza;44.8667;10.0667;Distretto Fidenza;965
+Salsomaggiore Terme;44.8167;9.9833;Distretto Fidenza;722
+Noceto;44.8167;10.1833;Distretto Fidenza;468
+Busseto;44.9833;10.0333;Distretto Fidenza;242
+Fontanellato;44.9000;10.1667;Distretto Fidenza;248
+Fontevivo;44.8333;10.2000;Distretto Fidenza;194
+San Secondo Parmense;44.9167;10.2000;Distretto Fidenza;207
+Soragna;44.9000;10.0833;Distretto Fidenza;168
+Roccabianca;44.9333;10.2333;Distretto Fidenza;103
+Polesine Zibello;45.0000;10.0800;Distretto Fidenza;110
+Sissa Trecasali;44.9400;10.2750;Distretto Fidenza;280
+Pellegrino Parmense;44.7500;9.9000;Distretto Fidenza;34
+Collecchio;44.7517;10.2167;Distretto Sud Est;522
+Langhirano;44.6167;10.2667;Distretto Sud Est;384
+Traversetolo;44.6500;10.3833;Distretto Sud Est;339
+Felino;44.6967;10.2300;Distretto Sud Est;325
+Sala Baganza;44.7478;10.2583;Distretto Sud Est;214
+Montechiarugolo;44.7000;10.4167;Distretto Sud Est;401
+Lesignano de' Bagni;44.6500;10.3167;Distretto Sud Est;180
+Neviano degli Arduini;44.5683;10.3817;Distretto Sud Est;121
+Calestano;44.5658;10.1328;Distretto Sud Est;76
+Terenzo;44.6667;10.1667;Distretto Sud Est;40
+Corniglio;44.4833;10.0667;Distretto Sud Est;62
+Tizzano Val Parma;44.4833;10.3167;Distretto Sud Est;78
+Palanzano;44.4500;10.2333;Distretto Sud Est;35
+Monchio delle Corti;44.4167;10.1167;Distretto Sud Est;29
+Borgo Val di Taro;44.4833;9.7833;Distretto Valli Taro e Ceno;236
+Medesano;44.7833;10.1333;Distretto Valli Taro e Ceno;377
+Fornovo di Taro;44.7000;10.1000;Distretto Valli Taro e Ceno;211
+Bedonia;44.5000;9.6333;Distretto Valli Taro e Ceno;109
+Varano de' Melegari;44.6667;10.0333;Distretto Valli Taro e Ceno;91
+Albareto;44.4333;9.7667;Distretto Valli Taro e Ceno;71
+Bardi;44.6333;9.7333;Distretto Valli Taro e Ceno;68
+Berceto;44.5167;9.9833;Distretto Valli Taro e Ceno;67
+Solignano;44.6167;9.9500;Distretto Valli Taro e Ceno;58
+Compiano;44.5000;9.7167;Distretto Valli Taro e Ceno;37
+Varsi;44.6667;9.8167;Distretto Valli Taro e Ceno;40
+Tornolo;44.4667;9.5667;Distretto Valli Taro e Ceno;30
+Bore;44.7167;9.8667;Distretto Valli Taro e Ceno;22
+Valmozzola;44.6333;9.8667;Distretto Valli Taro e Ceno;18`;
+
+const $=id=>document.getElementById('osm-'+id);
+const R=Math.cos(44.7*Math.PI/180)*111.32,K=110.57;
+const pr=(lo,la)=>[(lo-9.95)*R,-(la-44.7)*K];
+const poly=[[9.76,45.00],[9.98,45.03],[10.2,44.97],[10.4,44.94],[10.52,44.88],[10.50,44.72],[10.46,44.56],[10.36,44.42],[10.15,44.40],[9.95,44.37],[9.70,44.38],[9.50,44.40],[9.38,44.47],[9.48,44.60],[9.62,44.66],[9.70,44.78],[9.68,44.92]].map(p=>pr(p[0],p[1]));
+const DS=[[0xe8743b,pr(10.33,44.80)],[0x4aa3df,pr(10.05,44.87)],[0x9b6bd6,pr(10.30,44.57)],[0x3fb27f,pr(9.65,44.52)]];
+function inside(x,z){let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const[a,b]=poly[i],[d,e]=poly[j];if((b>z)!=(e>z)&&x<(d-a)*(z-b)/(e-b)+a)c=!c}return c}
+
+const cv=$('c'),wrap=$('wrap');
+const ren=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});
+ren.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(40,1,1,700);
+scene.add(new THREE.AmbientLight(0xffffff,.8));
+const dl=new THREE.DirectionalLight(0xffffff,.8);dl.position.set(-40,90,30);scene.add(dl);
+
+const S=2.2,cells=[],xs=poly.map(p=>p[0]),zs=poly.map(p=>p[1]);
+for(let x=Math.min(...xs);x<Math.max(...xs);x+=S)for(let z=Math.min(...zs);z<Math.max(...zs);z+=S){
+  const cx=x+S/2,cz=z+S/2;if(!inside(cx,cz))continue;let bd=0,bm=1e9;
+  DS.forEach((d,i)=>{const m=Math.hypot(cx-d[1][0],cz-d[1][1]);if(m<bm){bm=m;bd=i}});cells.push([cx,cz,bd]);
+}
+const base=new THREE.InstancedMesh(new THREE.BoxGeometry(S*.95,1,S*.95),new THREE.MeshLambertMaterial({color:0xffffff}),cells.length);
+const dm=new THREE.Object3D(),gc=new THREE.Color(0x8a93a0),cc=new THREE.Color();
+cells.forEach((c,i)=>{dm.position.set(c[0],.2,c[1]);dm.scale.set(1,.4,1);dm.updateMatrix();base.setMatrixAt(i,dm.matrix);cc.setHex(DS[c[2]][0]).lerp(gc,.8);base.setColorAt(i,cc)});
+scene.add(base);
+
+function sprite(t,w){
+  const c=document.createElement('canvas');c.width=360;c.height=64;const g=c.getContext('2d');
+  g.font='bold 27px system-ui,sans-serif';g.textAlign='center';g.lineWidth=6;g.strokeStyle='rgba(0,0,0,.75)';g.strokeText(t,180,40);g.fillStyle='#fff';g.fillText(t,180,40);
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthTest:false,transparent:true}));s.scale.set(w,w*64/360,1);return s;
+}
+const towns=new THREE.Group();scene.add(towns);
+[['Parma',10.33,44.80],['Fidenza',10.06,44.87],['Langhirano',10.26,44.61],['Fornovo',10.10,44.70],['Borgotaro',9.78,44.49],['Busseto',10.04,44.98]].forEach(t=>{const[x,z]=pr(t[1],t[2]);const s=sprite(t[0],11);s.position.set(x,2.5,z+4);towns.add(s)});
+
+const PAL=['#e8743b','#4aa3df','#f2c230','#9b6bd6','#3fb27f','#d9534f','#2ec4b6','#ff8fab'];
+let rows=[],cats=[],off=new Set(),scaleMode='sq',spikes=new THREE.Group(),picks=[],showLab=true;scene.add(spikes);
+
+function parse(t){
+  rows=[];t.split('\n').forEach(l=>{const p=l.trim().split(/[;\t]/);if(p.length<5)return;
+    const la=parseFloat(p[1]),lo=parseFloat(p[2]),n=parseFloat(p[4]);
+    if(isFinite(la)&&isFinite(lo)&&isFinite(n)&&n>0)rows.push({p:p[0].trim(),la,lo,c:p[3].trim(),n})});
+  cats=[...new Set(rows.map(r=>r.c))];off.forEach(c=>{if(!cats.includes(c))off.delete(c)});
+  legend();build();
+}
+function colorOf(c){return PAL[cats.indexOf(c)%PAL.length]}
+function legend(){
+  const box=$('cats');box.innerHTML='';
+  cats.forEach(c=>{const tot=rows.filter(r=>r.c===c).reduce((a,r)=>a+r.n,0);
+    const b=document.createElement('button');b.className='osm-cat'+(off.has(c)?'':' on');b.style.setProperty('--c',colorOf(c));
+    b.innerHTML='<i></i>'+c+' ('+tot.toLocaleString('it-IT')+')';
+    b.onclick=()=>{off.has(c)?off.delete(c):off.add(c);legend();build()};box.appendChild(b)});
+}
+function build(){
+  while(spikes.children.length){const o=spikes.children.pop();o.traverse(m=>{if(m.geometry)m.geometry.dispose()})}
+  picks=[];
+  const byP=new Map();
+  rows.forEach(r=>{if(off.has(r.c))return;const k=r.p+'|'+r.la+'|'+r.lo;if(!byP.has(k))byP.set(k,{p:r.p,la:r.la,lo:r.lo,s:[]});byP.get(k).s.push(r)});
+  const P=[...byP.values()];P.forEach(o=>{o.s.sort((a,b)=>cats.indexOf(a.c)-cats.indexOf(b.c));o.t=o.s.reduce((a,r)=>a+r.n,0)});
+  const mx=Math.max(1,...P.map(o=>o.t)),H0=48;
+  P.forEach(o=>{
+    const f=scaleMode==='sq'?Math.sqrt(o.t/mx):o.t/mx,H=Math.max(2,H0*f),r0=1.5;
+    const[x,z]=pr(o.lo,o.la);let y=0;
+    o.s.forEach(r=>{
+      const h=H*r.n/o.t,rb=r0*(1-.7*y/H),rt=r0*(1-.7*(y+h)/H);
+      const m=new THREE.Mesh(new THREE.CylinderGeometry(Math.max(rt,.12),rb,h,20),new THREE.MeshLambertMaterial({color:colorOf(r.c)}));
+      m.position.set(x,.4+y+h/2,z);m.userData={o,r};spikes.add(m);picks.push(m);y+=h});
+    if(P.length<12||o.t>=mx*.04){const s=sprite(o.p+' · '+o.t.toLocaleString('it-IT'),19);s.position.set(x,.4+H+3,z);s.userData.lab=1;s.visible=showLab;spikes.add(s)}
+  });
+}
+
+let th=.55,ph=.95,rad=125;
+function setCam(){cam.position.set(rad*Math.sin(ph)*Math.sin(th),rad*Math.cos(ph),rad*Math.sin(ph)*Math.cos(th));cam.lookAt(0,8,0)}
+function size(){const w=wrap.clientWidth,h=wrap.clientHeight;if(!w||!h)return;ren.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}
+if(window.ResizeObserver)new ResizeObserver(size).observe(wrap);else addEventListener('resize',size);
+size();setCam();
+
+const ptr=new Map();let moved=0,pd=0;
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptr.set(e.pointerId,[e.clientX,e.clientY]);moved=0;if(ptr.size===2){const a=[...ptr.values()];pd=Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1])}});
+cv.addEventListener('pointermove',e=>{
+  if(!ptr.has(e.pointerId))return;const o=ptr.get(e.pointerId);
+  if(ptr.size===1){th-=(e.clientX-o[0])*.006;ph=Math.min(1.45,Math.max(.15,ph-(e.clientY-o[1])*.006))}
+  ptr.set(e.pointerId,[e.clientX,e.clientY]);moved+=Math.abs(e.clientX-o[0])+Math.abs(e.clientY-o[1]);
+  if(ptr.size===2){const a=[...ptr.values()],d=Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1]);rad=Math.min(280,Math.max(40,rad*pd/d));pd=d}
+  setCam()});
+cv.addEventListener('pointerup',e=>{ptr.delete(e.pointerId);if(moved<6)pick(e)});
+cv.addEventListener('pointercancel',e=>ptr.delete(e.pointerId));
+cv.addEventListener('wheel',e=>{e.preventDefault();rad=Math.min(280,Math.max(40,rad*(1+e.deltaY*.001)));setCam()},{passive:false});
+const rc=new THREE.Raycaster(),mv=new THREE.Vector2(),info=$('info');
+function pick(e){
+  const b=cv.getBoundingClientRect();mv.set((e.clientX-b.left)/b.width*2-1,-((e.clientY-b.top)/b.height*2-1));
+  rc.setFromCamera(mv,cam);const h=rc.intersectObjects(picks)[0];if(!h)return;
+  const{o,r}=h.object.userData,pct=Math.round(100*r.n/o.t);
+  info.innerHTML='<b>'+o.p+'</b><br><span style="color:'+colorOf(r.c)+'">●</span> '+r.c+': <b>'+r.n.toLocaleString('it-IT')+'</b> ('+pct+'% del totale visibile del luogo, '+o.t.toLocaleString('it-IT')+')'+(/DEMO/.test(r.c)?'<br><i>dato dimostrativo inventato</i>':'');
+}
+
+const ta=$('data');
+function setScale(m){scaleMode=m;$('sq').classList.toggle('on',m==='sq');$('li').classList.toggle('on',m==='li');build()}
+$('sq').onclick=()=>setScale('sq');$('li').onclick=()=>setScale('li');
+$('lab').onclick=e=>{showLab=!showLab;e.target.classList.toggle('on',showLab);towns.visible=showLab;spikes.children.forEach(o=>{if(o.userData.lab)o.visible=showLab})};
+$('apply').onclick=()=>parse(ta.value);
+$('odasm').onclick=()=>{ta.value=ODASM;parse(ta.value)};
+$('stima').onclick=()=>{ta.value=STIMA;parse(ta.value)};
+$('demo').onclick=()=>{if(!/DEMO/.test(ta.value))ta.value=ta.value.trim()+'\n'+DEMO;parse(ta.value)};
+ta.value=STIMA;parse(ta.value);
+(function loop(){requestAnimationFrame(loop);ren.render(scene,cam)})();
+}
+if(window.THREE)start();
+else{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';s.onload=start;document.head.appendChild(s)}
+})();
+</script>
+</section>
+<!-- ===== FINE BLOCCO ===== -->
+	
 <!-- CSM PER DISTRETTO -->
 <div class="section-head">
   <span class="section-num">04</span>
